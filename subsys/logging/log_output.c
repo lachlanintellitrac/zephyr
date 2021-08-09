@@ -185,8 +185,6 @@ static int timestamp_print(const struct log_output *output,
 		timestamp /= timestamp_div;
 		total_seconds = timestamp / freq;
 		seconds = total_seconds;
-		hours = seconds / 3600U;
-		seconds -= hours * 3600U;
 		mins = seconds / 60U;
 		seconds -= mins * 60U;
 
@@ -215,8 +213,8 @@ static int timestamp_print(const struct log_output *output,
 #endif
 		} else {
 			length = print_formatted(output,
-						 "[%02u:%02u:%02u.%03u,%03u] ",
-						 hours, mins, seconds, ms, us);
+						 "?%04u:%02u.%03u|",
+						 mins, seconds, ms);
 		}
 	} else {
 		length = 0;
@@ -255,7 +253,7 @@ static int ids_print(const struct log_output *output, bool level_on,
 	int total = 0;
 
 	if (level_on) {
-		total += print_formatted(output, "<%s> ", severity[level]);
+		total += print_formatted(output, "%s| ", severity[level]);
 	}
 
 	if (source_id >= 0) {
