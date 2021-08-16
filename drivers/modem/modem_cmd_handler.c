@@ -360,6 +360,8 @@ static void cmd_handler_process_rx_buf(struct modem_cmd_handler_data *data)
 
 #if defined(CONFIG_MODEM_CONTEXT_VERBOSE_DEBUG)
 		LOG_HEXDUMP_DBG(data->match_buf, match_len, "RECV");
+#else
+		// LOG_HEXDUMP_INF(data->match_buf, match_len, "RECV");
 #endif
 
 		k_sem_take(&data->sem_parse_lock, K_FOREVER);
@@ -473,6 +475,9 @@ int modem_cmd_send_ext(struct modem_iface *iface,
 		       size_t handler_cmds_len, const uint8_t *buf,
 		       struct k_sem *sem, k_timeout_t timeout, int flags)
 {
+	//sem = &gsm->sem_response
+	//flags = MODEM_NO_TX_LOCK
+	//timeout = 2 seconds
 	struct modem_cmd_handler_data *data;
 	int ret = 0;
 
@@ -514,6 +519,9 @@ int modem_cmd_send_ext(struct modem_iface *iface,
 	} else {
 		LOG_DBG("EOL not set!!!");
 	}
+#else
+	// LOG_INF("sent to iface dev %s", iface->dev->name);
+	// LOG_HEXDUMP_INF(buf, strlen(buf), "SENT");
 #endif
 	if (sem) {
 		k_sem_reset(sem);

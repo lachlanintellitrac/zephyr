@@ -444,7 +444,7 @@ static int attach(const struct device *mux_uart, const struct device *uart,
 					      dev_data,
 					      &dev_data->dlci);
 			if (ret < 0) {
-				LOG_DBG("Cannot create DLCI %d (%d)",
+				LOG_WRN("Cannot create DLCI %d (%d)",
 					dlci_address, ret);
 				return ret;
 			}

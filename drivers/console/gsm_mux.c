@@ -512,6 +512,7 @@ static bool handle_t1_timeout(struct gsm_dlci *dlci)
 		dlci->retries--;
 		if (dlci->retries) {
 			dlci->req_start = k_uptime_get_32();
+			LOG_INF("Sent SABM to DLCI %i after T1 timeout", dlci->num);
 			(void)gsm_mux_send_command(dlci->mux, dlci->num,
 						   FT_SABM | PF);
 			return true;
@@ -697,6 +698,10 @@ static int gsm_dlci_opening_or_closing(struct gsm_dlci *dlci,
 
 	sys_slist_append(&dlci_active_t1_timers, &dlci->node);
 
+	// if (command == FT_SABM){
+	// 	LOG_INF("Sent SABM2 to DLCI %i", dlci->num);
+	// }
+
 	return gsm_mux_send_command(dlci->mux, dlci->num, command | PF);
 }
 
@@ -717,6 +722,7 @@ static int gsm_dlci_opening(struct gsm_dlci *dlci, dlci_command_cb_t cb)
 {
 	if (dlci->state == GSM_DLCI_OPEN || dlci->state == GSM_DLCI_OPENING) {
 		return -EALREADY;
+		// LOG_INF("DLCI Already Open");
 	}
 
 	LOG_DBG("[%p] DLCI %d opening", dlci, dlci->num);

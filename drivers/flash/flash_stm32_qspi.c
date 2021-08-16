@@ -781,7 +781,7 @@ static int flash_stm32_qspi_init(const struct device *dev)
 		return -EINVAL;
 	}
 
-	LOG_INF("%s: SFDP v %u.%u AP %x with %u PH", dev->name,
+	LOG_DBG("%s: SFDP v %u.%u AP %x with %u PH", dev->name,
 		hp->rev_major, hp->rev_minor, hp->access, 1 + hp->nph);
 
 	const struct jesd216_param_header *php = hp->phdr;
@@ -791,7 +791,7 @@ static int flash_stm32_qspi_init(const struct device *dev)
 	while (php != phpe) {
 		uint16_t id = jesd216_param_id(php);
 
-		LOG_INF("PH%u: %04x rev %u.%u: %u DW @ %x",
+		LOG_DBG("PH%u: %04x rev %u.%u: %u DW @ %x",
 			(php - hp->phdr), id, php->rev_major, php->rev_minor,
 			php->len_dw, jesd216_param_addr(php));
 

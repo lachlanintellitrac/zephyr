@@ -661,7 +661,7 @@ static int littlefs_mount(struct fs_mount_t *mountp)
 	LOG_INF("FS at %s:0x%x is %u 0x%x-byte blocks with %u cycle",
 		log_strdup(dev->name), (uint32_t)fs->area->fa_off,
 		block_count, block_size, block_cycles);
-	LOG_INF("sizes: rd %u ; pr %u ; ca %u ; la %u",
+	LOG_DBG("sizes: rd %u ; pr %u ; ca %u ; la %u",
 		read_size, prog_size, cache_size, lookahead_size);
 
 	__ASSERT_NO_MSG(prog_size != 0);
