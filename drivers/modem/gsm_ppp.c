@@ -1099,7 +1099,7 @@ void gsm_ppp_stop(const struct device *dev)
 	for (int i = 0; i < 5; i++){
 		if (k_work_delayable_is_pending(&gsm->gsm_configure_work)){
 			k_work_cancel_delayable(&gsm->gsm_configure_work);
-			LOG_ERR("gsm_configure was pending %i", i);
+			LOG_ERR("gsm_configure was pending %i careful of IWDG!", i);
 			k_sleep(K_SECONDS(1));
 		}
 	}

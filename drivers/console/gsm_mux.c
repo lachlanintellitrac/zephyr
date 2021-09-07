@@ -21,7 +21,7 @@ LOG_MODULE_REGISTER(gsm_mux, CONFIG_GSM_MUX_LOG_LEVEL);
 #define T2_MSEC 340  /* 333 ms */
 
 #define N1 256 /* default I frame size, GSM 07.10 ch 6.2.2.1 */
-#define N2 3   /* retry 3 times */
+#define N2 16   /* retry 3 times */
 
 /* CRC8 is the reflected CRC8/ROHC algorithm */
 #define FCS_POLYNOMIAL 0xe0 /* reversed crc8 */
@@ -512,10 +512,13 @@ static bool handle_t1_timeout(struct gsm_dlci *dlci)
 		dlci->retries--;
 		if (dlci->retries) {
 			dlci->req_start = k_uptime_get_32();
-			LOG_INF("Sent SABM to DLCI %i after T1 timeout", dlci->num);
+			
 			(void)gsm_mux_send_command(dlci->mux, dlci->num,
 						   FT_SABM | PF);
 			return true;
+		}
+		else {
+			LOG_WRN("SABM retries failed on DLCI %i", dlci->num);
 		}
 
 		if (dlci->command_cb) {
