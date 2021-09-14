@@ -7,6 +7,8 @@
 #include <logging/log.h>
 LOG_MODULE_REGISTER(uart_mux, CONFIG_UART_MUX_LOG_LEVEL);
 
+#define EXTEND_UART_MUX_RX_RINGBUFS 256
+
 #include <sys/__assert.h>
 #include <kernel.h>
 #include <init.h>
@@ -65,7 +67,7 @@ struct uart_mux {
 
 #define DEFINE_UART_MUX(x, _)						\
 	RING_BUF_DECLARE(uart_rx_ringbuf_##x,				\
-			 CONFIG_UART_MUX_RINGBUF_SIZE);			\
+			 CONFIG_UART_MUX_RINGBUF_SIZE+EXTEND_UART_MUX_RX_RINGBUFS);			\
 	static struct uart_mux uart_mux_##x __used			\
 		__attribute__((__section__(".uart_mux.data"))) = {	\
 			.rx_ringbuf = &uart_rx_ringbuf_##x,		\
@@ -876,7 +878,7 @@ void uart_mux_foreach(uart_mux_cb_t cb, void *user_data)
 
 #define DEFINE_UART_MUX_DEV_DATA(x, _)					  \
 	RING_BUF_DECLARE(tx_ringbuf_##x, CONFIG_UART_MUX_RINGBUF_SIZE);	  \
-	RING_BUF_DECLARE(rx_ringbuf_##x, CONFIG_UART_MUX_RINGBUF_SIZE);	  \
+	RING_BUF_DECLARE(rx_ringbuf_##x, CONFIG_UART_MUX_RINGBUF_SIZE+EXTEND_UART_MUX_RX_RINGBUFS);	  \
 	static struct uart_mux_dev_data uart_mux_dev_data_##x = {	  \
 		.tx_ringbuf = &tx_ringbuf_##x,				  \
 		.rx_ringbuf = &rx_ringbuf_##x,				  \
