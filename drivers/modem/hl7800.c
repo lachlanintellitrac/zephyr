@@ -1125,7 +1125,7 @@ static bool is_crlf(uint8_t c)
 	}
 }
 
-static void net_buf_skipcrlf(struct net_buf **buf)
+static void net_buf_skip_any_cr_or_lf(struct net_buf **buf)
 {
 	/* chop off any /n or /r */
 	while (*buf && is_crlf(*(*buf)->data)) {
@@ -1134,6 +1134,20 @@ static void net_buf_skipcrlf(struct net_buf **buf)
 			*buf = net_buf_frag_del(NULL, *buf);
 		}
 	}
+}
+
+static void net_buf_skip_one_cr_with_lf(struct net_buf **buf){
+
+	if ( (*buf)
+	 && ( (*buf)->len > 1 )
+	 && ( (*buf)->data[0] == '\r' )
+	 && ( (*buf)->data[1] == '\n' ) ){
+		net_buf_pull_le16(*buf);
+		if (!(*buf)->len) {
+			*buf = net_buf_frag_del(NULL, *buf);
+		}	 
+	}
+
 }
 
 static uint16_t net_buf_findcrlf(struct net_buf *buf, struct net_buf **frag)
@@ -1971,11 +1985,11 @@ static bool profile_handler(struct net_buf **buf, uint16_t len,
 
 	/* Prepare net buffer for this parser. */
 	net_buf_remove(buf, len);
-	net_buf_skipcrlf(buf);
+	net_buf_skip_any_cr_or_lf(buf);
 
 	size = wait_for_modem_data(buf, net_buf_frags_len(*buf),
 				   sizeof(PROFILE_LINE_1));
-	net_buf_skipcrlf(buf); /* remove any \r\n that are in the front */
+	net_buf_skip_any_cr_or_lf(buf); /* remove any \r\n that are in the front */
 
 	/* Parse configuration data to determine if echo is on/off. */
 	line_length = net_buf_findcrlf(*buf, &frag);
@@ -1992,7 +2006,7 @@ static bool profile_handler(struct net_buf **buf, uint16_t len,
 	}
 	LOG_DBG("echo: %d", echo_state);
 	net_buf_remove(buf, line_length);
-	net_buf_skipcrlf(buf);
+	net_buf_skip_any_cr_or_lf(buf);
 
 	if (active_profile) {
 		ictx.mdm_echo_is_on = (echo_state != 0);
@@ -2002,10 +2016,10 @@ static bool profile_handler(struct net_buf **buf, uint16_t len,
 	 * though most registers won't have the value 0xFF. */
 	size = wait_for_modem_data(buf, net_buf_frags_len(*buf),
 				   sizeof(PROFILE_LINE_2));
-	net_buf_skipcrlf(buf);
+	net_buf_skip_any_cr_or_lf(buf);
 	len = net_buf_findcrlf(*buf, &frag);
 	net_buf_remove(buf, len);
-	net_buf_skipcrlf(buf);
+	net_buf_skip_any_cr_or_lf(buf);
 
 	return false;
 }
@@ -2080,7 +2094,7 @@ static bool on_cmd_atcmdinfo_pdp_authentication_cfg(struct net_buf **buf,
 		}
 	}
 	net_buf_remove(buf, line_length);
-	net_buf_skipcrlf(buf);
+	net_buf_skip_any_cr_or_lf(buf);
 
 	return false;
 }
@@ -2136,7 +2150,7 @@ static bool on_cmd_atcmdinfo_pdp_context(struct net_buf **buf, uint16_t len)
 	}
 done:
 	net_buf_remove(buf, line_length);
-	net_buf_skipcrlf(buf);
+	net_buf_skip_any_cr_or_lf(buf);
 
 	return false;
 }
@@ -2787,7 +2801,7 @@ static void sock_read(struct net_buf **buf, uint16_t len)
 		/* wait for \n to be RXd.  \r was already RXd. */
 		wait_for_modem_data(buf, 0, 1);
 	}
-	net_buf_skipcrlf(buf);
+	net_buf_skip_one_cr_with_lf(buf);
 	if (!*buf) {
 		wait_for_modem_data(buf, 0, sock->rx_size);
 	}
@@ -2835,6 +2849,7 @@ static void sock_read(struct net_buf **buf, uint16_t len)
 		net_buf_frags_len(*buf));
 
 	if (!*buf || (net_buf_frags_len(*buf) < strlen(EOF_PATTERN))) {
+		// LOG_WRN("This thing");
 		wait_for_modem_data(buf, net_buf_frags_len(*buf),
 				    strlen(EOF_PATTERN));
 		if (!*buf) {
@@ -2847,11 +2862,12 @@ static void sock_read(struct net_buf **buf, uint16_t len)
 				    strlen(EOF_PATTERN));
 	eof[out_len] = 0;
 	/* remove EOF pattern from buffer */
-	net_buf_remove(buf, strlen(EOF_PATTERN));
 	if (strcmp(eof, EOF_PATTERN)) {
-		LOG_ERR("Could not find EOF");
+		LOG_HEXDUMP_ERR(eof, out_len, "Could not find EOF");
+		LOG_HEXDUMP_ERR(&c, 1, "Last byte of packet:");
 		goto rx_err;
 	}
+	net_buf_remove(buf, strlen(EOF_PATTERN));
 
 	/* Make sure we have \r\nOK\r\n length in the buffer */
 	if (!*buf || (net_buf_frags_len(*buf) < strlen(OK_STRING) + 4)) {
@@ -2870,7 +2886,7 @@ static void sock_read(struct net_buf **buf, uint16_t len)
 		goto rx_err;
 	}
 	/* remove \r\n before OK */
-	net_buf_skipcrlf(buf);
+	net_buf_skip_one_cr_with_lf(buf);
 
 	out_len = net_buf_linearize(ok_resp, sizeof(ok_resp), *buf, 0,
 				    strlen(OK_STRING));
@@ -2883,7 +2899,7 @@ static void sock_read(struct net_buf **buf, uint16_t len)
 	}
 
 	/* remove \r\n after OK */
-	net_buf_skipcrlf(buf);
+	net_buf_skip_one_cr_with_lf(buf);
 
 	net_pkt_cursor_init(sock->recv_pkt);
 	net_pkt_set_overwrite(sock->recv_pkt, true);
@@ -2925,7 +2941,6 @@ static bool on_cmd_connect(struct net_buf **buf, uint16_t len)
 
 	if (sock->state == SOCK_RX) {
 		remove_data_from_buffer = false;
-		// LOG_WRN("sock_read");
 		sock_read(buf, len);
 	} else {
 		k_sem_give(&sock->sock_send_sem);
@@ -2975,9 +2990,15 @@ static int start_socket_rx(struct hl7800_socket *sock, uint16_t rx_size)
 				net_if_get_mtu(ictx.iface) - NET_IPV6TCPH_LEN;
 		}
 #endif
+
 		snprintk(sendbuf, sizeof(sendbuf), "AT+KTCPRCV=%d,%u",
 			 sock->socket_id, sock->rx_size);
 	}
+
+	/* Disgusting, dirty, no-good, hacky method of
+	 * rate-limiting RX packets to prevent buffer overflows..
+	 */
+	// k_sleep(K_MSEC(250));
 
 	/* Send AT+K**PRCV, The modem
 	 * will respond with "CONNECT" and the data requested
@@ -3119,6 +3140,9 @@ static size_t hl7800_read_rx(struct net_buf **buf)
 					sizeof(uart_buffer), &bytes_read);
 		if (ret < 0 || bytes_read == 0) {
 			/* mdm_receiver buffer is empty */
+			if (ret < 0){
+				LOG_WRN("mdm_rcvr_recv ret %i", ret);
+			}
 			break;
 		}
 
@@ -3365,7 +3389,7 @@ static void hl7800_rx(void)
 			}
 #endif
 
-			net_buf_skipcrlf(&rx_buf);
+			net_buf_skip_any_cr_or_lf(&rx_buf);
 			if (!rx_buf) {
 				break;
 			}

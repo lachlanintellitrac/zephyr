@@ -35,7 +35,7 @@ void boot_banner(void)
 
 #if defined(CONFIG_BOOT_BANNER)
 #ifdef BUILD_VERSION
-	printk("*** Booting Zephyr OS build %s %s ***\n",
+	printk("\r*** Booting Zephyr OS build %s %s ***\n",
 	       STRINGIFY(BUILD_VERSION), BOOT_DELAY_BANNER);
 #else
 	printk("*** Booting Zephyr OS version %s %s ***\n",
