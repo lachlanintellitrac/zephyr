@@ -593,7 +593,7 @@ static void adc_stm32_isr(const struct device *dev)
 
 	adc_context_on_sampling_done(&data->ctx, dev);
 
-	LOG_DBG("ISR triggered.");
+	LOG_DBG("ISR triggered count %u chan %u", *(data->buffer-1), find_lsb_set(data->ctx.sequence.channels));
 }
 
 static int adc_stm32_read(const struct device *dev,

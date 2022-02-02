@@ -252,7 +252,7 @@ static const struct mdm_control_pinconfig pinconfig[] = {
 
 #define MDM_DEFAULT_AT_CMD_RETRIES 3
 #define MDM_WAKEUP_TIME K_SECONDS(12)
-#define MDM_BOOT_TIME K_SECONDS(12)
+#define MDM_BOOT_TIME K_SECONDS(6)
 
 #define MDM_WAIT_FOR_DATA_TIME K_MSEC(50)
 #define MDM_RESET_LOW_TIME K_MSEC(50)
@@ -2617,7 +2617,7 @@ static bool on_cmd_sock_error_code(struct net_buf **buf, uint16_t len)
 	out_len = net_buf_linearize(value, sizeof(value), *buf, 0, len);
 	value[out_len] = 0;
 
-	LOG_ERR("Error code: %s", log_strdup(value));
+	LOG_ERR("Error code: %s sock %i", log_strdup(value), ictx.last_socket_id);
 
 	ictx.last_error = -EIO;
 	sock = socket_from_id(ictx.last_socket_id);
@@ -3073,6 +3073,8 @@ static bool on_cmd_sockdataind(struct net_buf **buf, uint16_t len)
 		LOG_ERR("Unable to find socket_id:%d", socket_id);
 		goto error;
 	}
+
+	LOG_INF("KTCP_DATA sock %d bytes %d", socket_id, left_bytes);
 
 	sock->rx_size = left_bytes;
 	if (defer_rx) {
@@ -4111,6 +4113,8 @@ int32_t mdm_hl7800_reset(void)
 	}
 #endif
 
+	notify_all_tcp_sockets_closed();
+
 	hl7800_unlock();
 
 	return ret;
@@ -4123,6 +4127,8 @@ static int hl7800_power_off(void)
 	LOG_INF("Powering off modem");
 	wakeup_hl7800();
 	hl7800_stop_rssi_work();
+
+	notify_all_tcp_sockets_closed();
 
 	/* use the restarting flag to prevent +CEREG updates */
 	ictx.restarting = true;
